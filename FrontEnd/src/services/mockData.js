@@ -1,8 +1,12 @@
 export const mockMetrics = {
-  totalPatients: 12847,
-  activePatients: 8932,
-  avgAge: 42.5,
-  criticalCases: 23
+  totalPatients: 0,
+  activePatients: 0,
+  avgAge: 0,
+  criticalCases: 0,
+  avgSteps: 0,
+  avgHeartRate: 0,
+  avgSleep: 0,
+  avgWater: 0
 };
 
 export const mockTrendData = [
@@ -15,10 +19,10 @@ export const mockTrendData = [
 ];
 
 export const mockDiseaseData = [
-  { name: 'Diabetes', value: 35, color: '#00D4FF' },
-  { name: 'Hypertension', value: 28, color: '#8B5CF6' },
-  { name: 'Heart Disease', value: 22, color: '#00FF88' },
-  { name: 'Respiratory', value: 15, color: '#FF6B6B' }
+  { name: 'Steps', value: 0, color: '#00D4FF' },
+  { name: 'Heart Rate', value: 0, color: '#FF6B6B' },
+  { name: 'Sleep', value: 0, color: '#8B5CF6' },
+  { name: 'Water', value: 0, color: '#00FF88' }
 ];
 
 export const mockAgeGroups = [

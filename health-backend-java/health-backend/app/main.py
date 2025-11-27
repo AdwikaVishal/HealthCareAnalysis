@@ -66,6 +66,7 @@ async def get_summary(data_id: str):
         "summary": processed["summary"],
         "trends": processed["trends"],
         "anomalies": processed["anomalies"],
+        "timeseries": processed["timeseries"],
         "data_id": data_id
     }
 

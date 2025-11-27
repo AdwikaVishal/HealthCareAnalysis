@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 export default function PieChartCard({ title, data }) {
   return (
     <div className="card-gradient border border-gray-700 rounded-xl p-6 neon-glow-green">
-      <h3 className="text-xl font-semibold text-white mb-6">{title}</h3>
+      <h3 className="text-xl font-semibold dark:text-white text-slate-900 mb-6">{title}</h3>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

@@ -132,6 +132,9 @@ export default function Upload() {
               {uploadResult.fileName && (
                 <p className="mt-1 text-xs opacity-75">File: {uploadResult.fileName}</p>
               )}
+              {uploadResult.data_id && (
+                <p className="mt-1 text-xs opacity-75">Data ID: {uploadResult.data_id}</p>
+              )}
             </div>
           )}
         </div>
@@ -152,7 +155,7 @@ export default function Upload() {
               <CheckCircle className="w-5 h-5 text-neon-green mt-0.5" />
               <div>
                 <h3 className="font-medium dark:text-white text-slate-900">Required Columns</h3>
-                <p className="text-sm text-gray-400">patient_id, age, gender, diagnosis, date</p>
+                <p className="text-sm text-gray-400">user_id, date, metric, value</p>
               </div>
             </div>
             
@@ -168,10 +171,10 @@ export default function Upload() {
           <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <h4 className="text-neon-blue font-medium mb-2">Sample Data Format</h4>
             <pre className="text-xs text-gray-300 overflow-x-auto">
-{`patient_id,age,gender,diagnosis,date
-P001,45,M,Diabetes,2024-01-15
-P002,32,F,Hypertension,2024-01-16
-P003,67,M,Heart Disease,2024-01-17`}
+{`user_id,date,metric,value,type,notes
+u001,2024-01-15,steps,8500,walking,Morning jog
+u001,2024-01-15,heart_rate,72,resting,After breakfast
+u001,2024-01-15,sleep,7.5,,Good night sleep`}
             </pre>
           </div>
         </div>

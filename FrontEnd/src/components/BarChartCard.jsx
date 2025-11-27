@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export default function BarChartCard({ title, data, dataKey, color = '#8B5CF6' }) {
   return (
     <div className="card-gradient border border-gray-700 rounded-xl p-6 neon-glow-purple">
-      <h3 className="text-xl font-semibold text-white mb-6">{title}</h3>
+      <h3 className="text-xl font-semibold dark:text-white text-slate-900 mb-6">{title}</h3>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>

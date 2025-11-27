@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, UserCheck, Calendar, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Users, UserCheck, Heart, Activity, RefreshCw, Droplets, Moon } from 'lucide-react';
 import MetricCard from '../components/MetricCard';
 import LineChartCard from '../components/LineChartCard';
 import PieChartCard from '../components/PieChartCard';
@@ -10,36 +10,57 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
   const [trendData, setTrendData] = useState(null);
   const [diseaseData, setDiseaseData] = useState(null);
+  const [waterData, setWaterData] = useState(null);
+  const [heartRateData, setHeartRateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [metricsRes, trendsRes, diseaseRes] = await Promise.all([
-          api.getMetrics(),
-          api.getTrendData(),
-          api.getDiseaseData()
-        ]);
-        
-        setMetrics(metricsRes);
-        setTrendData(trendsRes);
-        setDiseaseData(diseaseRes);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      const [metricsRes, trendsRes, diseaseRes] = await Promise.all([
+        api.getMetrics(),
+        api.getTrendData(),
+        api.getDiseaseData()
+      ]);
+      
+      setMetrics(metricsRes);
+      setTrendData(trendsRes);
+      setDiseaseData(diseaseRes);
+      
+      // Get water and heart rate data
+      const [waterRes, heartRateRes] = await Promise.all([
+        api.getWaterData(),
+        api.getHeartRateData()
+      ]);
+      
+      setWaterData(waterRes);
+      setHeartRateData(heartRateRes);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
+    
+    // Listen for data updates from uploads
+    const handleDataUpdate = () => {
+      fetchData();
+    };
+    
+    window.addEventListener('dataUpdated', handleDataUpdate);
+    
+    return () => {
+      window.removeEventListener('dataUpdated', handleDataUpdate);
+    };
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const newData = await api.refreshData();
-      setTrendData(newData.trendData);
+      await fetchData();
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -72,60 +93,61 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Total Patients"
+          title="Total Users"
           value={metrics.totalPatients}
-          change={8.2}
+          change={0}
           icon={Users}
           color="blue"
+          showTrend={false}
         />
         <MetricCard
-          title="Active Patients"
-          value={metrics.activePatients}
-          change={5.4}
-          icon={UserCheck}
+          title="Avg Steps"
+          value={metrics.avgSteps?.toLocaleString() || '0'}
+          change={metrics.stepsChange || 0}
+          icon={Activity}
           color="green"
         />
         <MetricCard
-          title="Average Age"
-          value={metrics.avgAge}
-          change={-2.1}
-          icon={Calendar}
-          color="purple"
+          title="Avg Heart Rate"
+          value={`${metrics.avgHeartRate || 0} bpm`}
+          change={metrics.heartRateChange || 0}
+          icon={Heart}
+          color="red"
         />
         <MetricCard
-          title="Critical Cases"
-          value={metrics.criticalCases}
-          change={-12.3}
-          icon={AlertTriangle}
-          color="blue"
+          title="Avg Sleep"
+          value={`${metrics.avgSleep || 0}h`}
+          change={metrics.sleepChange || 0}
+          icon={Moon}
+          color="purple"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartCard
-          title="Patient Trends"
+          title="Daily Steps Trend"
           data={trendData}
-          dataKey="patients"
+          dataKey="value"
           color="#00D4FF"
         />
         <PieChartCard
-          title="Disease Distribution"
+          title="Wellness Overview"
           data={diseaseData}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartCard
-          title="Revenue Trends"
-          data={trendData}
-          dataKey="revenue"
-          color="#8B5CF6"
+          title="Water Intake Trend"
+          data={waterData || []}
+          dataKey="value"
+          color="#00D4FF"
         />
         <LineChartCard
-          title="Satisfaction Score"
-          data={trendData}
-          dataKey="satisfaction"
-          color="#00FF88"
+          title="Heart Rate Trend"
+          data={heartRateData || []}
+          dataKey="value"
+          color="#FF6B6B"
         />
       </div>
     </div>

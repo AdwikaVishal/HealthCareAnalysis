@@ -138,9 +138,14 @@ def get_trends_and_insights(df: pd.DataFrame):
     validate_schema(df)
     df = normalize(df)
     
+    # Calculate user count before aggregation
+    unique_users = df['user_id'].nunique()
+    
     daily_df = aggregate_per_day(df)
     
-    summary = {}
+    summary = {
+        "total_users": unique_users
+    }
     trends = []
     anomalies = []
     
@@ -160,10 +165,17 @@ def get_trends_and_insights(df: pd.DataFrame):
             a['metric'] = metric
             anomalies.append(a)
             
-        # 3. Trends (Simple comparison of last 3 days vs previous 3 days)
-        if len(metric_data) >= 6:
-            recent = metric_data.iloc[-3:].mean()
-            prev = metric_data.iloc[-6:-3].mean()
+        # 3. Trends (Compare first vs last day, or recent vs previous)
+        if len(metric_data) >= 2:
+            if len(metric_data) >= 6:
+                # Use original logic for longer datasets
+                recent = metric_data.iloc[-3:].mean()
+                prev = metric_data.iloc[-6:-3].mean()
+            else:
+                # For shorter datasets, compare last vs first
+                recent = metric_data.iloc[-1]
+                prev = metric_data.iloc[0]
+            
             if prev > 0:
                 change = ((recent - prev) / prev) * 100
                 direction = "up" if change > 5 else "down" if change < -5 else "stable"
