@@ -46,40 +46,13 @@ def aggregate_per_day(df: pd.DataFrame) -> pd.DataFrame:
     """
     Aggregates data per day and metric.
     """
-    # Group by date (day) and metric
-    # We need to handle different aggregation rules for different metrics
-    # But for simplicity, we can do a pivot or custom apply
-    
     # First, ensure we are working with just dates for grouping
     df['day'] = df['date'].dt.date
     
-    # Define aggregation rules
-    # steps: sum
-    # sleep: sum (assuming chunks) or max? Let's do sum.
-    # heart_rate: mean
-    # water: sum
+    # Since we're converting from wide format, we already have one value per day per metric
+    # Just group by day and metric and take the first value (should be only one anyway)
+    result = df.groupby(['day', 'metric'])['value'].first().reset_index()
     
-    # We can't easily do different aggs in one groupby without pivoting first or custom apply.
-    # Let's split by metric.
-    
-    agged_data = []
-    
-    for metric, group in df.groupby('metric'):
-        if metric in ['steps', 'water', 'sleep']:
-            agg_func = 'sum'
-        elif metric in ['heart_rate', 'weight']:
-            agg_func = 'mean'
-        else:
-            agg_func = 'mean' # default
-            
-        daily = group.groupby('day')['value'].agg(agg_func).reset_index()
-        daily['metric'] = metric
-        agged_data.append(daily)
-        
-    if not agged_data:
-        return pd.DataFrame(columns=['day', 'metric', 'value'])
-        
-    result = pd.concat(agged_data, ignore_index=True)
     return result
 
 def detect_anomalies(series: pd.Series, window=7, k=3):
@@ -119,11 +92,11 @@ def convert_wide_to_long(df: pd.DataFrame) -> pd.DataFrame:
     for _, row in df.iterrows():
         date = row['date']
         records.extend([
-            {'user_id': 'user1', 'date': date, 'metric': 'heart_rate', 'value': row['heart_rate_bpm']},
-            {'user_id': 'user1', 'date': date, 'metric': 'steps', 'value': row['steps']},
-            {'user_id': 'user1', 'date': date, 'metric': 'sleep', 'value': row['sleep_hours']},
-            {'user_id': 'user1', 'date': date, 'metric': 'water', 'value': row['water_liters']},
-            {'user_id': 'user1', 'date': date, 'metric': 'calories', 'value': row['calories_burned']}
+            {'user_id': 'user1', 'date': date, 'metric': 'heart_rate', 'value': float(row['heart_rate'])},
+            {'user_id': 'user1', 'date': date, 'metric': 'steps', 'value': float(row['steps'])},
+            {'user_id': 'user1', 'date': date, 'metric': 'sleep', 'value': float(row['sleep_hours'])},
+            {'user_id': 'user1', 'date': date, 'metric': 'water', 'value': float(row['water_liters'])},
+            {'user_id': 'user1', 'date': date, 'metric': 'calories', 'value': float(row['calories_burned'])}
         ])
     return pd.DataFrame(records)
 
@@ -132,7 +105,7 @@ def get_trends_and_insights(df: pd.DataFrame):
     Main processing function to generate summary, trends, and anomalies.
     """
     # Handle wide format CSV
-    if 'heart_rate_bpm' in df.columns:
+    if 'heart_rate' in df.columns and 'steps' in df.columns:
         df = convert_wide_to_long(df)
     
     validate_schema(df)
@@ -208,9 +181,15 @@ def get_trends_and_insights(df: pd.DataFrame):
                 "reason": "Fatigue warning: Sleep < 4h"
             })
 
+    # Ensure all values are properly converted to standard Python types
+    timeseries_data = daily_df.to_dict(orient='records')
+    for record in timeseries_data:
+        record['value'] = float(record['value'])
+        record['day'] = str(record['day'])
+    
     return {
         "summary": summary,
         "trends": trends,
         "anomalies": anomalies,
-        "timeseries": daily_df.to_dict(orient='records') # For frontend graphs
+        "timeseries": timeseries_data # For frontend graphs
     }
