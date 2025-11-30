@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Upload as UploadIcon, FileText, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import PieChartCard from '../components/PieChartCard';
 
@@ -8,6 +9,7 @@ export default function Upload() {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [uploadedData, setUploadedData] = useState(null);
+  const { user, saveUserUpload } = useAuth();
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -44,15 +46,37 @@ export default function Upload() {
 
     setUploading(true);
     setUploadResult(null);
+    setUploadedData(null);
 
     try {
-      const result = await api.uploadFile(file);
+      console.log('Starting file upload:', file.name);
+      const result = await api.uploadFile(file, user?.id);
+      console.log('Upload result:', result);
+      
       setUploadResult(result);
-      if (result.success && result.data) {
-        setUploadedData(result.data);
+      
+      if (result.success) {
+        // Save upload to user's history
+        try {
+          saveUserUpload({
+            fileName: file.name,
+            data_id: result.data_id,
+            metrics: result.uploadData?.metrics
+          });
+        } catch (saveError) {
+          console.warn('Failed to save upload to user history:', saveError);
+        }
+        
+        if (result.uploadData) {
+          setUploadedData(result.uploadData);
+        }
       }
     } catch (error) {
-      setUploadResult({ success: false, message: error.message });
+      console.error('Upload error:', error);
+      setUploadResult({ 
+        success: false, 
+        message: error.message || 'Upload failed. Please try again.' 
+      });
     } finally {
       setUploading(false);
     }
@@ -187,36 +211,36 @@ u001,2024-01-15,sleep,7.5,,Good night sleep`}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="card-gradient border border-neon-blue/30 rounded-lg p-4">
               <h3 className="text-neon-blue font-semibold">Total Records</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.totalPatients}</p>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.totalPatients || 0}</p>
             </div>
             <div className="card-gradient border border-neon-green/30 rounded-lg p-4">
               <h3 className="text-neon-green font-semibold">Avg Steps/Day</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.avgSteps?.toLocaleString()}</p>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.avgSteps?.toLocaleString() || '0'}</p>
             </div>
             <div className="card-gradient border border-neon-purple/30 rounded-lg p-4">
               <h3 className="text-neon-purple font-semibold">Avg Heart Rate</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.avgHeartRate} BPM</p>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.avgHeartRate || 0} BPM</p>
             </div>
             <div className="card-gradient border border-yellow-500/30 rounded-lg p-4">
               <h3 className="text-yellow-400 font-semibold">Avg Sleep</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.avgSleep}h</p>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.avgSleep || 0}h</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="card-gradient border border-blue-500/30 rounded-lg p-4">
               <h3 className="text-blue-400 font-semibold">Active Users</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.activePatients}</p>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.activePatients || 0}</p>
               <p className="text-sm text-gray-400">6000+ steps/day</p>
             </div>
             <div className="card-gradient border border-green-500/30 rounded-lg p-4">
-              <h3 className="text-green-400 font-semibold">Avg Calories</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.avgCalories?.toLocaleString()}</p>
+              <h3 className="text-green-400 font-semibold">Avg Water</h3>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.avgWater || 0}L</p>
               <p className="text-sm text-gray-400">per day</p>
             </div>
             <div className="card-gradient border border-red-500/30 rounded-lg p-4">
               <h3 className="text-red-400 font-semibold">Health Alerts</h3>
-              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics.criticalCases}</p>
+              <p className="text-2xl font-bold dark:text-white text-slate-900">{uploadedData.metrics?.criticalCases || 0}</p>
               <p className="text-sm text-gray-400">need attention</p>
             </div>
           </div>
@@ -224,36 +248,29 @@ u001,2024-01-15,sleep,7.5,,Good night sleep`}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PieChartCard
               title="Health Status Distribution"
-              data={uploadedData.healthData}
+              data={uploadedData.diseaseData || []}
             />
             
             <div className="card-gradient border border-gray-700 rounded-xl p-6">
-              <h3 className="text-xl font-semibold dark:text-white text-slate-900 mb-4">Sample Records</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b dark:border-gray-600 border-slate-400">
-                      {uploadedData.rawData[0] && Object.keys(uploadedData.rawData[0]).map(key => (
-                        <th key={key} className="text-left py-2 px-3 dark:text-gray-300 text-slate-900">{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {uploadedData.rawData.slice(0, 5).map((row, index) => (
-                      <tr key={index} className="border-b dark:border-gray-700/50 border-slate-300/50">
-                        {Object.values(row).map((value, i) => (
-                          <td key={i} className="py-2 px-3 dark:text-gray-300 text-slate-900">{value}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="text-xl font-semibold dark:text-white text-slate-900 mb-4">Upload Summary</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">File Name:</span>
+                  <span className="text-white">{uploadedData.fileName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Upload Date:</span>
+                  <span className="text-white">{new Date(uploadedData.uploadDate).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Data ID:</span>
+                  <span className="text-white font-mono text-sm">{uploadedData.data_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Status:</span>
+                  <span className="text-green-400">Successfully Processed</span>
+                </div>
               </div>
-              {uploadedData.rawData.length > 5 && (
-                <p className="dark:text-gray-400 text-slate-700 text-xs mt-2">
-                  Showing 5 of {uploadedData.rawData.length} records
-                </p>
-              )}
             </div>
           </div>
         </div>

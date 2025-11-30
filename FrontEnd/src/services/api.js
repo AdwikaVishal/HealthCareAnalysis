@@ -30,10 +30,17 @@ const transformBackendData = (backendData) => {
   if (timeseries && Array.isArray(timeseries)) {
     timeseries.forEach(item => {
       if (!chartData[item.metric]) chartData[item.metric] = [];
+      
+      let scaledValue = item.value;
+      if (item.metric === 'water') {
+        scaledValue = Math.round((item.value / 1000) * 10) / 10;  // 2200 → 2.2 L
+      }
+      // steps, heart_rate and sleep stay as original
+      
       chartData[item.metric].push({
         date: item.day,
-        value: item.value,
-        [item.metric]: item.value
+        value: scaledValue,
+        [item.metric]: scaledValue
       });
     });
   }
@@ -76,7 +83,15 @@ const transformBackendData = (backendData) => {
 };
 
 export const api = {
-  async getMetrics() {
+  async getMetrics(userId = null) {
+    // Try to load user-specific data first
+    if (userId) {
+      const userData = this.loadUserData(userId);
+      if (userData && userData.metrics) {
+        return userData.metrics;
+      }
+    }
+    
     if (currentData.currentDataId) {
       try {
         const data = await this.getDataById(currentData.currentDataId);
@@ -201,8 +216,15 @@ export const api = {
     return currentData;
   },
 
-  async uploadFile(file) {
+  async uploadFile(file, userId = null) {
     try {
+      // Check if backend is accessible
+      try {
+        await fetch(`${API_BASE_URL}/health`);
+      } catch (healthError) {
+        throw new Error('Backend server is not running. Please start the backend server first.');
+      }
+      
       const formData = new FormData();
       formData.append('file', file);
       
@@ -212,78 +234,134 @@ export const api = {
       });
       
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.statusText} - ${errorText}`);
       }
       
       const result = await response.json();
+      if (!result.data_id) {
+        throw new Error('No data ID received from server');
+      }
+      
       currentData.currentDataId = result.data_id;
       
       // Fetch full data and update current data
       const fullData = await this.getDataById(result.data_id);
-      console.log('Backend data:', fullData); // Debug log
+      if (!fullData) {
+        throw new Error('Failed to fetch processed data');
+      }
+      
       const transformed = transformBackendData(fullData);
+      if (!transformed || !transformed.metrics) {
+        throw new Error('Failed to transform data');
+      }
       
       currentData.metrics = transformed.metrics;
-      currentData.trendData = transformed.trendData;
-      currentData.heartRateData = transformed.heartRateData;
-      currentData.sleepData = transformed.sleepData;
-      currentData.waterData = transformed.waterData;
+      currentData.trendData = transformed.trendData || [];
+      currentData.heartRateData = transformed.heartRateData || [];
+      currentData.sleepData = transformed.sleepData || [];
+      currentData.waterData = transformed.waterData || [];
       
-      // Simple user growth calculation
-      const previousUserCount = parseInt(localStorage.getItem('previousUserCount') || '0');
+      // User-specific data handling
+      const userKey = userId ? `healthApp_user_${userId}` : 'healthApp_guest';
+      let previousData = {};
+      try {
+        previousData = JSON.parse(localStorage.getItem(userKey) || '{}');
+      } catch (e) {
+        console.warn('Failed to parse previous user data:', e);
+      }
+      
+      const previousUserCount = previousData.totalPatients || 0;
+      
       let userGrowth = 0;
-      
       if (previousUserCount === 0) {
-        // First upload - show positive growth
         userGrowth = transformed.metrics.totalPatients > 1 ? 15.5 : 8.2;
       } else {
-        // Calculate actual growth
         userGrowth = Math.round(((transformed.metrics.totalPatients - previousUserCount) / previousUserCount) * 100);
       }
       
-      console.log('User Growth Debug:', {
-        current: transformed.metrics.totalPatients,
-        previous: previousUserCount,
-        growth: userGrowth
-      });
-      
       transformed.metrics.userGrowth = userGrowth;
-      localStorage.setItem('previousUserCount', transformed.metrics.totalPatients.toString());
       
-      // Make data accessible
-      api.currentData = currentData;
+      // Save user-specific data
+      const userDataToSave = {
+        ...transformed,
+        uploadDate: new Date().toISOString(),
+        fileName: file.name,
+        data_id: result.data_id
+      };
+      
+      try {
+        localStorage.setItem(userKey, JSON.stringify(userDataToSave));
+      } catch (e) {
+        console.warn('Failed to save user data to localStorage:', e);
+      }
       
       const insights = [
         {
           id: Date.now(),
           type: 'success',
           title: 'Health Data Processed',
-          description: `Analyzed ${transformed.metrics.totalPatients} users with ${transformed.trendData.length} data points`,
+          description: `Analyzed health data with ${(transformed.trendData || []).length} data points`,
           timestamp: 'Just now'
         },
         {
           id: Date.now() + 1,
-          type: transformed.anomalies.length > 0 ? 'warning' : 'success',
+          type: (transformed.anomalies || []).length > 0 ? 'warning' : 'success',
           title: 'Health Assessment',
-          description: transformed.anomalies.length > 0 ? 
+          description: (transformed.anomalies || []).length > 0 ? 
             `${transformed.anomalies.length} anomalies detected` :
             'All health metrics within normal ranges',
           timestamp: 'Just now'
         }
       ];
-      currentData.insights = [...insights, ...currentData.insights.slice(0, 2)];
+      currentData.insights = [...insights, ...(currentData.insights || []).slice(0, 2)];
       
-      window.dispatchEvent(new CustomEvent('dataUpdated', { detail: currentData }));
+      try {
+        window.dispatchEvent(new CustomEvent('dataUpdated', { detail: currentData }));
+      } catch (e) {
+        console.warn('Failed to dispatch dataUpdated event:', e);
+      }
       
       return { 
         success: true, 
-        message: `Health data processed: ${transformed.metrics.totalPatients} users analyzed`, 
+        message: `Health data processed successfully`, 
         fileName: file.name,
-        data_id: result.data_id
+        data_id: result.data_id,
+        uploadData: userDataToSave
       };
     } catch (error) {
+      console.error('Upload error:', error);
       throw new Error(`File upload failed: ${error.message}`);
     }
+  },
+
+  loadUserData(userId) {
+    const userKey = userId ? `healthApp_user_${userId}` : 'healthApp_guest';
+    const userData = JSON.parse(localStorage.getItem(userKey) || '{}');
+    
+    if (userData.metrics) {
+      currentData.metrics = userData.metrics;
+      currentData.trendData = userData.trendData || [];
+      currentData.heartRateData = userData.heartRateData || [];
+      currentData.sleepData = userData.sleepData || [];
+      currentData.waterData = userData.waterData || [];
+      currentData.currentDataId = userData.data_id;
+      
+      return userData;
+    }
+    
+    return null;
+  },
+
+  clearCurrentData() {
+    // Reset to default mock data when no user data exists
+    currentData.metrics = mockMetrics;
+    currentData.trendData = mockTrendData;
+    currentData.heartRateData = [];
+    currentData.sleepData = [];
+    currentData.waterData = [];
+    currentData.currentDataId = null;
+    currentData.insights = mockInsights;
   },
 
   async getDataById(dataId) {
@@ -474,14 +552,63 @@ export const api = {
 
   async getWaterData() {
     if (currentData.currentDataId) {
-      return currentData.waterData || [];
+      try {
+        const response = await fetch(`${API_BASE_URL}/data/${currentData.currentDataId}/trends`);
+        if (response.ok) {
+          const timeseries = await response.json();
+          // Filter for water data only
+          const waterData = timeseries.filter(item => item.metric === 'water').map(item => ({
+            date: item.day,
+            value: Math.round(item.value * 10) / 10
+          }));
+          currentData.waterData = waterData;
+          return waterData;
+        }
+      } catch (error) {
+        console.error('Error fetching water data:', error);
+      }
     }
     return [];
   },
 
   async getHeartRateData() {
     if (currentData.currentDataId) {
-      return currentData.heartRateData || [];
+      try {
+        const response = await fetch(`${API_BASE_URL}/data/${currentData.currentDataId}/trends`);
+        if (response.ok) {
+          const timeseries = await response.json();
+          // Filter for heart_rate data only
+          const heartRateData = timeseries.filter(item => item.metric === 'heart_rate').map(item => ({
+            date: item.day,
+            value: Math.round(item.value)
+          }));
+          currentData.heartRateData = heartRateData;
+          return heartRateData;
+        }
+      } catch (error) {
+        console.error('Error fetching heart rate data:', error);
+      }
+    }
+    return [];
+  },
+
+  async getSleepData() {
+    if (currentData.currentDataId) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/data/${currentData.currentDataId}/trends`);
+        if (response.ok) {
+          const timeseries = await response.json();
+          // Filter for sleep data only
+          const sleepData = timeseries.filter(item => item.metric === 'sleep').map(item => ({
+            date: item.day,
+            value: Math.round(item.value * 10) / 10
+          }));
+          currentData.sleepData = sleepData;
+          return sleepData;
+        }
+      } catch (error) {
+        console.error('Error fetching sleep data:', error);
+      }
     }
     return [];
   },

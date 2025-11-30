@@ -29,11 +29,6 @@ export default function Navbar({ onSearch }) {
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           
-          <button className="relative p-2 dark:text-gray-400 text-slate-900 hover:text-blue-600 transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
-          </button>
-          
           <UserDropdown />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, UserCheck, Heart, Activity, RefreshCw, Droplets, Moon } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import MetricCard from '../components/MetricCard';
 import LineChartCard from '../components/LineChartCard';
 import PieChartCard from '../components/PieChartCard';
@@ -14,27 +15,46 @@ export default function Dashboard() {
   const [heartRateData, setHeartRateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth();
 
   const fetchData = async () => {
     try {
-      const [metricsRes, trendsRes, diseaseRes] = await Promise.all([
-        api.getMetrics(),
-        api.getTrendData(),
-        api.getDiseaseData()
-      ]);
+      // Check if user has uploaded data
+      const userData = user ? api.loadUserData(user.id) : null;
       
-      setMetrics(metricsRes);
-      setTrendData(trendsRes);
-      setDiseaseData(diseaseRes);
-      
-      // Get water and heart rate data
-      const [waterRes, heartRateRes] = await Promise.all([
-        api.getWaterData(),
-        api.getHeartRateData()
-      ]);
-      
-      setWaterData(waterRes);
-      setHeartRateData(heartRateRes);
+      if (userData) {
+        // User has data, fetch it
+        const [metricsRes, trendsRes, diseaseRes] = await Promise.all([
+          api.getMetrics(user?.id),
+          api.getTrendData(),
+          api.getDiseaseData()
+        ]);
+        
+        setMetrics(metricsRes);
+        setTrendData(trendsRes);
+        setDiseaseData(diseaseRes);
+        
+        // Get water and heart rate data
+        const [waterRes, heartRateRes] = await Promise.all([
+          api.getWaterData(),
+          api.getHeartRateData()
+        ]);
+        
+        setWaterData(waterRes);
+        setHeartRateData(heartRateRes);
+      } else {
+        // No user data, show empty state
+        setMetrics({
+          totalPatients: 0,
+          avgSteps: 0,
+          avgHeartRate: 0,
+          avgSleep: 0
+        });
+        setTrendData([]);
+        setDiseaseData([]);
+        setWaterData([]);
+        setHeartRateData([]);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -93,8 +113,8 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Total Users"
-          value={metrics.totalPatients}
+          title="Data Points"
+          value={metrics.totalPatients || 0}
           change={0}
           icon={Users}
           color="blue"

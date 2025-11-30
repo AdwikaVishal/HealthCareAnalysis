@@ -1,12 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 export default function MainLayout() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Load user-specific data when layout mounts or user changes
+    if (user) {
+      const userData = api.loadUserData(user.id);
+      if (!userData) {
+        // If no user data exists, clear current data to show empty state
+        api.clearCurrentData();
+      }
+    } else {
+      // Clear data when no user is logged in
+      api.clearCurrentData();
+    }
+  }, [user]);
 
   const handleSearch = async (query) => {
     if (!query.trim()) {

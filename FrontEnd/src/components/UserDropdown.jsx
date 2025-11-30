@@ -1,19 +1,17 @@
 import { useState } from 'react';
-import { User, X } from 'lucide-react';
+import { User, X, LogOut } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function UserDropdown() {
   const [showUserInfo, setShowUserInfo] = useState(false);
   const { isDark } = useTheme();
+  const { user, logout } = useAuth();
   
-  const userInfo = {
-    name: 'Dr. Sarah Johnson',
-    age: 34,
-    role: 'Health Administrator',
-    email: 'sarah.johnson@healthcenter.com',
-    department: 'Analytics & Insights',
-    lastLogin: new Date().toLocaleDateString()
+  const handleLogout = () => {
+    logout();
+    setShowUserInfo(false);
   };
 
   const dropdown = showUserInfo ? createPortal(
@@ -36,35 +34,33 @@ export default function UserDropdown() {
               <User className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="font-semibold dark:text-white text-slate-900">{userInfo.name}</p>
-              <p className="text-sm dark:text-gray-400 text-slate-600">{userInfo.role}</p>
+              <p className="font-semibold dark:text-white text-slate-900">{user?.name}</p>
+              <p className="text-sm dark:text-gray-400 text-slate-600">Health User</p>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="dark:text-gray-400 text-slate-600">Age</p>
-              <p className="dark:text-white text-slate-900 font-medium">{userInfo.age} years</p>
-            </div>
-            <div>
-              <p className="dark:text-gray-400 text-slate-600">Department</p>
-              <p className="dark:text-white text-slate-900 font-medium">{userInfo.department}</p>
-            </div>
+          <div className="text-sm">
+            <p className="dark:text-gray-400 text-slate-600">Member Since</p>
+            <p className="dark:text-white text-slate-900 font-medium">{new Date(user?.createdAt).toLocaleDateString()}</p>
           </div>
           
           <div className="text-sm">
             <p className="dark:text-gray-400 text-slate-600">Email</p>
-            <p className="dark:text-white text-slate-900 font-medium">{userInfo.email}</p>
+            <p className="dark:text-white text-slate-900 font-medium">{user?.email}</p>
           </div>
           
           <div className="text-sm">
-            <p className="dark:text-gray-400 text-slate-600">Last Login</p>
-            <p className="dark:text-white text-slate-900 font-medium">{userInfo.lastLogin}</p>
+            <p className="dark:text-gray-400 text-slate-600">Uploads</p>
+            <p className="dark:text-white text-slate-900 font-medium">{user?.uploads?.length || 0} files</p>
           </div>
           
           <div className="pt-3 border-t dark:border-slate-700 border-slate-200">
-            <button className="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-              Sign Out
+            <button 
+              onClick={handleLogout}
+              className="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
@@ -80,7 +76,7 @@ export default function UserDropdown() {
         className="flex items-center space-x-2 dark:bg-blue-900/50 bg-slate-200/70 rounded-lg px-3 py-2 dark:hover:bg-blue-800/50 hover:bg-slate-300/70 transition-colors"
       >
         <User className="w-4 h-4 dark:text-gray-400 text-slate-900" />
-        <span className="text-sm dark:text-gray-300 text-slate-900">Admin</span>
+        <span className="text-sm dark:text-gray-300 text-slate-900">{user?.name?.split(' ')[0] || 'User'}</span>
       </button>
       {dropdown}
     </>

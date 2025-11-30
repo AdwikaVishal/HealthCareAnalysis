@@ -5,7 +5,10 @@ import Loader from '../components/Loader';
 import { api } from '../services/api';
 
 export default function Trends() {
-  const [trendData, setTrendData] = useState(null);
+  const [stepsData, setStepsData] = useState(null);
+  const [heartRateData, setHeartRateData] = useState(null);
+  const [sleepData, setSleepData] = useState(null);
+  const [waterData, setWaterData] = useState(null);
   const [ageData, setAgeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('6months');
@@ -18,12 +21,18 @@ export default function Trends() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [trendsRes, ageRes] = await Promise.all([
+        const [stepsRes, heartRateRes, sleepRes, waterRes, ageRes] = await Promise.all([
           api.getTrendData(),
+          api.getHeartRateData(),
+          api.getSleepData(),
+          api.getWaterData(),
           api.getAgeGroups()
         ]);
         
-        setTrendData(trendsRes);
+        setStepsData(stepsRes);
+        setHeartRateData(heartRateRes);
+        setSleepData(sleepRes);
+        setWaterData(waterRes);
         setAgeData(ageRes);
       } catch (error) {
         console.error('Error fetching trends data:', error);
@@ -34,8 +43,19 @@ export default function Trends() {
 
     fetchData();
     
-    const handleDataUpdate = (event) => {
-      setTrendData(event.detail.trendData);
+    const handleDataUpdate = async (event) => {
+      // Refresh all data when updated
+      const [stepsRes, heartRateRes, sleepRes, waterRes] = await Promise.all([
+        api.getTrendData(),
+        api.getHeartRateData(),
+        api.getSleepData(),
+        api.getWaterData()
+      ]);
+      
+      setStepsData(stepsRes);
+      setHeartRateData(heartRateRes);
+      setSleepData(sleepRes);
+      setWaterData(waterRes);
     };
     
     window.addEventListener('dataUpdated', handleDataUpdate);
@@ -57,8 +77,17 @@ export default function Trends() {
   // Auto-refresh every 45 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
-      const newData = await api.refreshData();
-      setTrendData(newData.trendData);
+      const [stepsRes, heartRateRes, sleepRes, waterRes] = await Promise.all([
+        api.getTrendData(),
+        api.getHeartRateData(),
+        api.getSleepData(),
+        api.getWaterData()
+      ]);
+      
+      setStepsData(stepsRes);
+      setHeartRateData(heartRateRes);
+      setSleepData(sleepRes);
+      setWaterData(waterRes);
     }, 45000);
     return () => clearInterval(interval);
   }, []);
@@ -85,13 +114,13 @@ export default function Trends() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartCard
           title="Daily Steps Trend"
-          data={trendData}
+          data={stepsData || []}
           dataKey="value"
           color="#00D4FF"
         />
         <LineChartCard
           title="Heart Rate Trend"
-          data={trendData}
+          data={heartRateData || []}
           dataKey="value"
           color="#FF6B6B"
         />
@@ -100,13 +129,13 @@ export default function Trends() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartCard
           title="Sleep Quality Trend"
-          data={trendData}
+          data={sleepData || []}
           dataKey="value"
           color="#8B5CF6"
         />
         <LineChartCard
           title="Water Intake Trend"
-          data={trendData}
+          data={waterData || []}
           dataKey="value"
           color="#00FF88"
         />

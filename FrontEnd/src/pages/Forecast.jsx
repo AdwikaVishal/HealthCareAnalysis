@@ -52,9 +52,9 @@ export default function Forecast() {
 
   const getRiskColor = (level) => {
     switch (level) {
-      case 'high': return 'border-red-500 bg-red-500/10 text-red-400';
-      case 'medium': return 'border-yellow-500 bg-yellow-500/10 text-yellow-400';
-      default: return 'border-green-500 bg-green-500/10 text-green-400';
+      case 'high': return 'border-red-500 bg-red-500/10 dark:text-red-400 text-red-600';
+      case 'medium': return 'border-yellow-500 bg-yellow-500/10 dark:text-yellow-400 text-yellow-600';
+      default: return 'border-green-500 bg-green-500/10 dark:text-green-400 text-green-600';
     }
   };
 
@@ -152,11 +152,11 @@ export default function Forecast() {
           return (
             <div key={index} className={`card-gradient border ${colors} rounded-lg p-4 transition-all duration-500`}>
               <div className="flex items-center space-x-3 mb-2">
-                <Icon className="w-5 h-5" />
-                <h4 className="font-semibold capitalize">{risk.type} Risk</h4>
+                <Icon className={`w-5 h-5 ${colors.includes('red') ? 'dark:text-red-400 text-red-600' : colors.includes('yellow') ? 'dark:text-yellow-400 text-yellow-600' : 'dark:text-green-400 text-green-600'}`} />
+                <h4 className="font-semibold capitalize dark:text-white text-slate-900">{risk.type} Risk</h4>
               </div>
               <div className="flex items-center space-x-2 mb-1">
-                <p className="text-2xl font-bold">{risk.percentage}%</p>
+                <p className="text-2xl font-bold dark:text-white text-slate-900">{risk.percentage}%</p>
                 {isChanged && (
                   <span className={`text-sm px-2 py-1 rounded-full ${
                     change < 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
@@ -166,7 +166,7 @@ export default function Forecast() {
                   </span>
                 )}
               </div>
-              <p className="text-sm opacity-80">{risk.description}</p>
+              <p className="text-sm dark:text-gray-300 text-slate-700">{risk.description}</p>
             </div>
           );
         })}
