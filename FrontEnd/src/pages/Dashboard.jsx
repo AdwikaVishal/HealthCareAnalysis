@@ -19,44 +19,43 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      // Check if user has uploaded data
-      const userData = user ? api.loadUserData(user.id) : null;
-      
-      if (userData) {
-        // User has data, fetch it
-        const [metricsRes, trendsRes, diseaseRes] = await Promise.all([
-          api.getMetrics(user?.id),
-          api.getTrendData(),
-          api.getDiseaseData()
-        ]);
-        
-        setMetrics(metricsRes);
-        setTrendData(trendsRes);
-        setDiseaseData(diseaseRes);
-        
-        // Get water and heart rate data
-        const [waterRes, heartRateRes] = await Promise.all([
-          api.getWaterData(),
-          api.getHeartRateData()
-        ]);
-        
-        setWaterData(waterRes);
-        setHeartRateData(heartRateRes);
-      } else {
-        // No user data, show empty state
-        setMetrics({
-          totalPatients: 0,
-          avgSteps: 0,
-          avgHeartRate: 0,
-          avgSleep: 0
-        });
-        setTrendData([]);
-        setDiseaseData([]);
-        setWaterData([]);
-        setHeartRateData([]);
+      // Load user data if available
+      if (user) {
+        api.loadUserData(user.id);
       }
+      
+      // Fetch all data in parallel
+      const [metricsRes, trendsRes, diseaseRes, waterRes, heartRateRes] = await Promise.all([
+        api.getMetrics(user?.id),
+        api.getTrendData(),
+        api.getDiseaseData(),
+        api.getWaterData(),
+        api.getHeartRateData()
+      ]);
+      
+      setMetrics(metricsRes);
+      setTrendData(trendsRes);
+      setDiseaseData(diseaseRes);
+      setWaterData(waterRes);
+      setHeartRateData(heartRateRes);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set empty state on error
+      setMetrics({
+        totalPatients: 0,
+        avgSteps: 0,
+        avgHeartRate: 0,
+        avgSleep: 0,
+        avgWater: 0,
+        stepsChange: 0,
+        heartRateChange: 0,
+        sleepChange: 0,
+        waterChange: 0
+      });
+      setTrendData([]);
+      setDiseaseData([{ name: 'No Data', value: 100, color: '#6B7280' }]);
+      setWaterData([]);
+      setHeartRateData([]);
     } finally {
       setLoading(false);
     }
@@ -143,6 +142,24 @@ export default function Dashboard() {
         />
       </div>
 
+      {metrics.totalPatients === 0 && (
+        <div className="card-gradient border border-gray-700 rounded-xl p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4">
+            <Activity className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">No Health Data Available</h3>
+          <p className="text-gray-400 mb-4">
+            Upload your health data CSV file to see personalized insights and analytics.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/upload'}
+            className="bg-neon-blue hover:bg-neon-blue/80 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          >
+            Upload Data
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartCard
           title="Daily Steps Trend"
@@ -151,25 +168,27 @@ export default function Dashboard() {
           color="#00D4FF"
         />
         <PieChartCard
-          title="Wellness Overview"
+          title="Health Metrics Overview"
           data={diseaseData}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LineChartCard
-          title="Water Intake Trend"
-          data={waterData || []}
-          dataKey="value"
-          color="#00D4FF"
-        />
-        <LineChartCard
-          title="Heart Rate Trend"
-          data={heartRateData || []}
-          dataKey="value"
-          color="#FF6B6B"
-        />
-      </div>
+      {metrics.totalPatients > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LineChartCard
+            title="Water Intake Trend"
+            data={waterData || []}
+            dataKey="value"
+            color="#00FF88"
+          />
+          <LineChartCard
+            title="Heart Rate Trend"
+            data={heartRateData || []}
+            dataKey="value"
+            color="#FF6B6B"
+          />
+        </div>
+      )}
     </div>
   );
 }

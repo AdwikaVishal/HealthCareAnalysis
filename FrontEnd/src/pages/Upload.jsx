@@ -57,19 +57,25 @@ export default function Upload() {
       
       if (result.success) {
         // Save upload to user's history
-        try {
-          saveUserUpload({
-            fileName: file.name,
-            data_id: result.data_id,
-            metrics: result.uploadData?.metrics
-          });
-        } catch (saveError) {
-          console.warn('Failed to save upload to user history:', saveError);
+        if (user) {
+          try {
+            saveUserUpload({
+              fileName: file.name,
+              data_id: result.data_id,
+              metrics: result.uploadData?.metrics
+            });
+          } catch (saveError) {
+            console.warn('Failed to save upload to user history:', saveError);
+          }
         }
         
+        // Set uploaded data for display
         if (result.uploadData) {
           setUploadedData(result.uploadData);
         }
+        
+        // Trigger dashboard refresh
+        window.dispatchEvent(new CustomEvent('dataUpdated', { detail: result.uploadData }));
       }
     } catch (error) {
       console.error('Upload error:', error);

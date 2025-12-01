@@ -91,21 +91,35 @@ def convert_wide_to_long(df: pd.DataFrame) -> pd.DataFrame:
     records = []
     for _, row in df.iterrows():
         date = row['date']
-        records.extend([
-            {'user_id': 'user1', 'date': date, 'metric': 'heart_rate', 'value': float(row['heart_rate'])},
-            {'user_id': 'user1', 'date': date, 'metric': 'steps', 'value': float(row['steps'])},
-            {'user_id': 'user1', 'date': date, 'metric': 'sleep', 'value': float(row['sleep_hours'])},
-            {'user_id': 'user1', 'date': date, 'metric': 'water', 'value': float(row['water_liters'])},
-            {'user_id': 'user1', 'date': date, 'metric': 'calories', 'value': float(row['calories_burned'])}
-        ])
+        user_id = row.get('user_id', 'user1')
+        
+        # Handle different column name variations
+        if 'heart_rate' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'heart_rate', 'value': float(row['heart_rate'])})
+        if 'steps' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'steps', 'value': float(row['steps'])})
+        if 'sleep_hours' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'sleep', 'value': float(row['sleep_hours'])})
+        elif 'sleep' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'sleep', 'value': float(row['sleep'])})
+        if 'water_liters' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'water', 'value': float(row['water_liters']) * 1000})  # Convert to ml
+        elif 'water' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'water', 'value': float(row['water']) * 1000})  # Convert to ml
+        if 'calories_burned' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'calories', 'value': float(row['calories_burned'])})
+        elif 'calories' in row:
+            records.append({'user_id': user_id, 'date': date, 'metric': 'calories', 'value': float(row['calories'])})
+            
     return pd.DataFrame(records)
 
 def get_trends_and_insights(df: pd.DataFrame):
     """
     Main processing function to generate summary, trends, and anomalies.
     """
-    # Handle wide format CSV
-    if 'heart_rate' in df.columns and 'steps' in df.columns:
+    # Handle wide format CSV (check for common wide format indicators)
+    wide_format_indicators = ['heart_rate', 'steps', 'sleep_hours', 'water_liters', 'calories_burned']
+    if any(col in df.columns for col in wide_format_indicators) and 'metric' not in df.columns:
         df = convert_wide_to_long(df)
     
     validate_schema(df)
