@@ -105,6 +105,47 @@ export const mockForecastData = {
   ]
 };
 
+// Daily mock time series for charts (date/value format)
+export const mockStepsSeries = [
+  { date: '2025-11-24', value: 7200 },
+  { date: '2025-11-25', value: 7500 },
+  { date: '2025-11-26', value: 6800 },
+  { date: '2025-11-27', value: 8100 },
+  { date: '2025-11-28', value: 8400 },
+  { date: '2025-11-29', value: 8700 },
+  { date: '2025-11-30', value: 9000 }
+];
+
+export const mockHeartRateSeries = [
+  { date: '2025-11-24', value: 72 },
+  { date: '2025-11-25', value: 74 },
+  { date: '2025-11-26', value: 73 },
+  { date: '2025-11-27', value: 71 },
+  { date: '2025-11-28', value: 75 },
+  { date: '2025-11-29', value: 74 },
+  { date: '2025-11-30', value: 73 }
+];
+
+export const mockSleepSeries = [
+  { date: '2025-11-24', value: 7.2 },
+  { date: '2025-11-25', value: 7.5 },
+  { date: '2025-11-26', value: 6.8 },
+  { date: '2025-11-27', value: 7.1 },
+  { date: '2025-11-28', value: 7.4 },
+  { date: '2025-11-29', value: 7.0 },
+  { date: '2025-11-30', value: 7.3 }
+];
+
+export const mockWaterSeries = [
+  { date: '2025-11-24', value: 2.0 },
+  { date: '2025-11-25', value: 1.8 },
+  { date: '2025-11-26', value: 2.2 },
+  { date: '2025-11-27', value: 2.1 },
+  { date: '2025-11-28', value: 2.3 },
+  { date: '2025-11-29', value: 2.0 },
+  { date: '2025-11-30', value: 2.1 }
+];
+
 export const mockRiskData = [
   { type: 'fatigue', percentage: 23, level: 'medium', description: 'Moderate fatigue risk based on sleep patterns' },
   { type: 'hydration', percentage: 15, level: 'low', description: 'Low dehydration risk with current intake' },

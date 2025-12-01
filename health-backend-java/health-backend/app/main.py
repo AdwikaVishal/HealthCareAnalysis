@@ -5,7 +5,10 @@ import uuid
 from typing import Dict
 from .processor import get_trends_and_insights
 from .models import UploadResponse, SummaryResponse
+from .navbar_ai import router as navbar_router
+from .multi_agent import run_agents_in_parallel
 import asyncio
+import time
 import os
 from dotenv import load_dotenv
 
@@ -31,8 +34,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include navbar AI router
+app.include_router(navbar_router)
+
 # In-memory storage
 DATA_STORE: Dict[str, Dict] = {}
+
+# Session store: keeps recent data_ids per user (simple in-memory memory bank)
+SESSIONS: Dict[str, list] = {}
+
+# Simple metrics for observability
+METRICS = {
+    'uploads': 0,
+    'last_upload_time_s': 0.0
+}
 
 # Simple Gemini helper function
 async def enhance_with_gemini(health_data):
@@ -83,8 +98,14 @@ async def upload_csv(file: UploadFile = File(...)):
         # Process with basic analysis
         results = get_trends_and_insights(df)
         
-        # Enhance with Gemini AI insights
-        results = await enhance_with_gemini(results)
+        # Run multi-agent enhancement in parallel (LLM + evaluator)
+        try:
+            agent_results = await run_agents_in_parallel(results.get('summary', {}))
+            # attach agent outputs under results
+            results['agents'] = agent_results
+        except Exception as e:
+            print(f"Agent orchestration failed: {e}")
+            results['agents'] = []
         
         # Generate ID and store
         data_id = str(uuid.uuid4())
@@ -100,6 +121,17 @@ async def upload_csv(file: UploadFile = File(...)):
             "processed": results
         }
         DATA_STORE[data_id] = stored_data
+
+        # Update session memory for this user
+        try:
+            if user_id:
+                SESSIONS.setdefault(user_id, []).append(data_id)
+        except Exception:
+            pass
+
+        # Update simple metrics
+        METRICS['uploads'] += 1
+        METRICS['last_upload_time_s'] = time.time()
         
         return {
             "status": "ok",
@@ -125,6 +157,7 @@ async def get_summary(data_id: str):
         "trends": processed["trends"],
         "anomalies": processed["anomalies"],
         "timeseries": processed["timeseries"],
+        "agents": processed.get('agents', []),
         "data_id": data_id
     }
 
@@ -145,6 +178,18 @@ async def get_anomalies(data_id: str):
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+@app.get("/sessions/{user_id}")
+async def get_user_sessions(user_id: str):
+    """Return recent data ids stored for a user (in-memory session)."""
+    return {"user_id": user_id, "data_ids": SESSIONS.get(user_id, [])}
+
+
+@app.get("/metrics")
+async def get_metrics():
+    """Return simple observability metrics."""
+    return METRICS
 
 from pydantic import BaseModel
 
