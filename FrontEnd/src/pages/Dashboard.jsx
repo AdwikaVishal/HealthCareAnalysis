@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import MetricCard from '../components/MetricCard';
 import LineChartCard from '../components/LineChartCard';
 import PieChartCard from '../components/PieChartCard';
+import GeminiInsights from '../components/GeminiInsights';
 import Loader from '../components/Loader';
 import { api } from '../services/api';
 
@@ -174,20 +175,29 @@ export default function Dashboard() {
       </div>
 
       {metrics.totalPatients > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <LineChartCard
-            title="Water Intake Trend"
-            data={waterData || []}
-            dataKey="value"
-            color="#00FF88"
-          />
-          <LineChartCard
-            title="Heart Rate Trend"
-            data={heartRateData || []}
-            dataKey="value"
-            color="#FF6B6B"
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <LineChartCard
+                  title="Water Intake Trend"
+                  data={waterData || []}
+                  dataKey="value"
+                  color="#00FF88"
+                />
+                <LineChartCard
+                  title="Heart Rate Trend"
+                  data={heartRateData || []}
+                  dataKey="value"
+                  color="#FF6B6B"
+                />
+              </div>
+            </div>
+            <div>
+              <GeminiInsights />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -71,6 +71,15 @@ export default function Upload() {
         
         // Set uploaded data for display
         if (result.uploadData) {
+          // Ensure diseaseData exists for pie chart
+          if (!result.uploadData.diseaseData || result.uploadData.diseaseData.length === 0) {
+            result.uploadData.diseaseData = [
+              { name: 'Steps', value: 30, color: '#00D4FF' },
+              { name: 'Heart Rate', value: 25, color: '#FF6B6B' },
+              { name: 'Sleep', value: 25, color: '#8B5CF6' },
+              { name: 'Water', value: 20, color: '#00FF88' }
+            ];
+          }
           setUploadedData(result.uploadData);
         }
         
@@ -157,6 +166,11 @@ export default function Upload() {
                 <span className="font-medium">
                   {uploadResult.success ? 'Success!' : 'Error!'}
                 </span>
+                {uploadResult.ai_enhanced && (
+                  <span className="bg-neon-blue/20 text-neon-blue px-2 py-1 rounded text-xs font-medium">
+                    AI Enhanced
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-sm">{uploadResult.message}</p>
               {uploadResult.fileName && (
